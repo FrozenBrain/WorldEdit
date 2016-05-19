@@ -21,6 +21,7 @@ package com.sk89q.worldedit;
 
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockID;
+import com.sk89q.worldedit.blocks.BlockMaterial;
 import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
@@ -77,6 +78,7 @@ import com.sk89q.worldedit.util.eventbus.EventBus;
 import com.sk89q.worldedit.world.NullWorld;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.biome.BaseBiome;
+import com.sk89q.worldedit.world.registry.BlockRegistry;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -2211,6 +2213,83 @@ public class EditSession implements Extent {
             vset = getHollowed(vset);
         }
         return setBlocks(vset, pattern);
+    }
+
+    /**
+     * Let all blocks inside the selection fall to the ground.
+     *
+     * @param region the region
+     * @return number of blocks affected
+     * @throws MaxChangedBlocksException thrown if too many blocks are changed
+     */
+    public int letBlocksFall(Region region) throws MaxChangedBlocksException {
+        int affected = 0;
+
+        final BaseBlock air = new BaseBlock(BlockID.AIR, 0);
+        final BlockRegistry registry = world.getWorldData().getBlockRegistry();
+
+        Vector minimumPoint = region.getMinimumPoint();
+        Vector maximumPoint = region.getMaximumPoint();
+
+        for (int x = minimumPoint.getBlockX(); x <= maximumPoint.getBlockX(); x++) {
+            skip:
+            for (int z = minimumPoint.getBlockZ(); z <= maximumPoint.getBlockZ(); z++) {
+                int fromY = minimumPoint.getBlockY();
+                int maxY = maximumPoint.getBlockY();
+
+                // Find lowest block in region
+                while (!region.contains(new Vector(x, fromY, z))) {
+                    fromY++;
+
+                    // Skip column: column not in region
+                    if (fromY > maxY) {
+                        continue skip;
+                    }
+                }
+
+                // Find highest block in region
+                while (!region.contains(new Vector(x, maxY, z))) {
+                    maxY--;
+                }
+
+                int toY = fromY;
+
+                // Find last air block above group (lower than region)
+                while (!isSolid(registry, world, new Vector(x, toY - 1, z)) && toY > 0) {
+                    toY--;
+                }
+
+                // Move blocks to the ground
+                for (; fromY <= maxY; fromY++) {
+                    final Vector fromPt = new Vector(x, fromY, z);
+                    final BaseBlock block = getBlock(fromPt);
+                    if (!block.isAir()) {
+                        final Vector toPt = new Vector(x, toY, z);
+                        if (setBlock(fromPt, air)) {
+                            affected++;
+                        }
+                        if (isSolid(registry, block)) {
+                            if (setBlock(toPt, block)) {
+                                affected++;
+                            }
+                            toY++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return affected;
+    }
+
+    private boolean isSolid(BlockRegistry registry, BaseBlock block) {
+        BlockMaterial material = registry.getMaterial(block);
+        return material == null || material.isSolid();
+    }
+
+    private boolean isSolid(BlockRegistry registry, World world, Vector vector) {
+        BaseBlock block = world.getBlock(vector);
+        return isSolid(registry, block);
     }
 
     private static double hypot(double... pars) {

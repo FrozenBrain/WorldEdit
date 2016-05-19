@@ -467,4 +467,18 @@ public class RegionCommands {
         player.print(ground.getAffected() + " flora created.");
     }
 
+    @Command(
+            aliases = {"/fall"},
+            usage = "",
+            desc = "Let blocks fall down",
+            min = 0,
+            max = 0
+    )
+    @CommandPermissions("worldedit.region.fall")
+    @Logging(REGION)
+    public void fall(Player player, EditSession editSession, @Selection Region region) throws WorldEditException {
+        int affected = editSession.letBlocksFall(region);
+        player.print(affected + " block(s) have been changed.");
+    }
+
 }

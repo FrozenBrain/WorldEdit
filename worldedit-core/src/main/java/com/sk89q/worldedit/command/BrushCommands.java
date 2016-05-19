@@ -34,6 +34,7 @@ import com.sk89q.worldedit.command.tool.BrushTool;
 import com.sk89q.worldedit.command.tool.brush.ButcherBrush;
 import com.sk89q.worldedit.command.tool.brush.ClipboardBrush;
 import com.sk89q.worldedit.command.tool.brush.CylinderBrush;
+import com.sk89q.worldedit.command.tool.brush.FallBrush;
 import com.sk89q.worldedit.command.tool.brush.GravityBrush;
 import com.sk89q.worldedit.command.tool.brush.HollowCylinderBrush;
 import com.sk89q.worldedit.command.tool.brush.HollowSphereBrush;
@@ -224,6 +225,29 @@ public class BrushCommands {
 
         player.print(String.format("Gravity brush equipped (%.0f).",
                 radius));
+    }
+
+    @Command(
+            aliases = { "fall" },
+            usage = "[radius]",
+            flags = "h",
+            desc = "Fall brush",
+            help =
+                    "This brush simulates the affect of gravity.\n" +
+                            "The -h flag makes it affect blocks starting at the world's max y, " +
+                            "instead of the clicked block's y + radius.",
+            min = 0,
+            max = 1
+    )
+    @CommandPermissions("worldedit.brush.fall")
+    public void fallBrush(Player player, LocalSession session, EditSession editSession, @Optional("5") double radius, @Switch('h') boolean fromMaxY) throws WorldEditException {
+        worldEdit.checkMaxBrushRadius(radius);
+
+        BrushTool tool = session.getBrushTool(player.getItemInHand());
+        tool.setSize(radius);
+        tool.setBrush(new FallBrush(fromMaxY), "worldedit.brush.fall");
+
+        player.print(String.format("Fall brush equipped (%.0f).", radius));
     }
     
     @Command(
